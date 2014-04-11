@@ -26,7 +26,7 @@
 #include "event2/event-config.h"
 #include "evconfig-private.h"
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(WINCE)
 #ifndef _WIN32_WINNT
 /* Minimum required for InitializeCriticalSectionAndSpinCount */
 #define _WIN32_WINNT 0x0403
@@ -46,6 +46,9 @@ struct event_base;
 #include "time-internal.h"
 
 #define SPIN_COUNT 2000
+#if defined (WINCE)
+#include "util-internal.h"
+#endif
 
 static void *
 evthread_win32_lock_create(unsigned locktype)
@@ -53,7 +56,7 @@ evthread_win32_lock_create(unsigned locktype)
 	CRITICAL_SECTION *lock = mm_malloc(sizeof(CRITICAL_SECTION));
 	if (!lock)
 		return NULL;
-	if (InitializeCriticalSectionAndSpinCount(lock, SPIN_COUNT) == 0) {
+    if (InitializeCriticalSectionAndSpinCount(lock, SPIN_COUNT) == 0) {
 		mm_free(lock);
 		return NULL;
 	}

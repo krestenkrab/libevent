@@ -28,7 +28,7 @@
 #include "event2/event-config.h"
 #include "evconfig-private.h"
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(WINCE)
 #include <winsock2.h>
 #include <windows.h>
 #include <io.h>
@@ -2894,7 +2894,7 @@ evbuffer_file_segment_new(
 	seg->file_offset = offset;
 	seg->cleanup_cb = NULL;
 	seg->cleanup_cb_arg = NULL;
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(WINCE)
 #ifndef lseek
 #define lseek _lseeki64
 #endif

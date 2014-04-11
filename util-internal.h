@@ -46,6 +46,15 @@
 #include "time-internal.h"
 #include "ipv6-internal.h"
 
+#if defined (WINCE)
+#include <winsock2.h>
+__inline BOOL InitializeCriticalSectionAndSpinCount(LPCRITICAL_SECTION lpCriticalSection, DWORD dwSpinCount)
+{
+  InitializeCriticalSection(lpCriticalSection);
+  return TRUE;
+}
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif

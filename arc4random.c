@@ -51,7 +51,8 @@
 
 #ifndef ARC4RANDOM_NO_INCLUDES
 #include "evconfig-private.h"
-#ifdef _WIN32
+#if defined(_WIN32) || defined(WINCE)
+#include <winsock2.h>
 #include <wincrypt.h>
 #include <process.h>
 #else

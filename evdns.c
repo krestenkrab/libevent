@@ -75,7 +75,7 @@
 #include <sys/stat.h>
 #include <stdio.h>
 #include <stdarg.h>
-#ifdef _WIN32
+#if defined(_WIN32) || defined(WINCE)
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #ifndef _WIN32_IE
@@ -99,7 +99,7 @@
 #include "ipv6-internal.h"
 #include "util-internal.h"
 #include "evthread-internal.h"
-#ifdef _WIN32
+#if defined(_WIN32) || defined(WINCE)
 #include <ctype.h>
 #include <winsock2.h>
 #include <windows.h>
@@ -3542,7 +3542,7 @@ evdns_base_resolv_conf_parse(struct evdns_base *base, int flags, const char *con
 static char *
 evdns_get_default_hosts_filename(void)
 {
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(WINCE) // no hostfile on wince
 	/* Windows is a little coy about where it puts its configuration
 	 * files.  Sure, they're _usually_ in C:\windows\system32, but
 	 * there's no reason in principle they couldn't be in
@@ -3673,7 +3673,7 @@ load_nameservers_with_getnetworkparams(struct evdns_base *base)
 		status = -1;
 		goto done;
 	}
-	if (!(fn = (GetNetworkParams_fn_t) GetProcAddress(handle, "GetNetworkParams"))) {
+	if (!(fn = (GetNetworkParams_fn_t) GetProcAddress(handle, TEXT("GetNetworkParams")))) {
 		log(EVDNS_LOG_WARN, "Could not get address of function.");
 		status = -1;
 		goto done;
@@ -3739,32 +3739,40 @@ config_nameserver_from_reg_key(struct evdns_base *base, HKEY key, const TCHAR *s
 	char *buf;
 	DWORD bufsz = 0, type = 0;
 	int status = 0;
+        WCHAR wsubkey [MAX_PATH];
+        char abuf [MAX_PATH];
 
+        mbstowcs(wsubkey,subkey,1024);
 	ASSERT_LOCKED(base);
-	if (RegQueryValueEx(key, subkey, 0, &type, NULL, &bufsz)
+	if (RegQueryValueExW(key, wsubkey, 0, &type, NULL, &bufsz)
 	    != ERROR_MORE_DATA)
 		return -1;
 	if (!(buf = mm_malloc(bufsz)))
 		return -1;
 
-	if (RegQueryValueEx(key, subkey, 0, &type, (LPBYTE)buf, &bufsz)
+	if (RegQueryValueExW(key, wsubkey, 0, &type, (LPBYTE)buf, &bufsz)
 	    == ERROR_SUCCESS && bufsz > 1) {
-		status = evdns_nameserver_ip_add_line(base,buf);
+                wcstombs(abuf,(PWCHAR)buf,MAX_PATH);
+		status = evdns_nameserver_ip_add_line(base,abuf);
 	}
 
 	mm_free(buf);
 	return status;
 }
 
-#define SERVICES_KEY TEXT("System\\CurrentControlSet\\Services\\")
-#define WIN_NS_9X_KEY  SERVICES_KEY TEXT("VxD\\MSTCP")
-#define WIN_NS_NT_KEY  SERVICES_KEY TEXT("Tcpip\\Parameters")
+#define SERVICES_KEY L"System\\CurrentControlSet\\Services\\"
+#define WIN_NS_9X_KEY  SERVICES_KEY L"VxD\\MSTCP"
+#define WIN_NS_NT_KEY  SERVICES_KEY L"Tcpip\\Parameters"
 
 static int
 load_nameservers_from_registry(struct evdns_base *base)
 {
 	int found = 0;
 	int r;
+        OSVERSIONINFO info = {0};
+        info.dwOSVersionInfoSize = sizeof (info);
+        GetVersionExW((LPOSVERSIONINFO)&info);
+
 #define TRY(k, name) \
 	if (!found && config_nameserver_from_reg_key(base,k,TEXT(name)) == 0) { \
 		log(EVDNS_LOG_DEBUG,"Found nameservers in %s/%s",#k,name); \
@@ -3776,15 +3784,15 @@ load_nameservers_from_registry(struct evdns_base *base)
 
 	ASSERT_LOCKED(base);
 
-	if (((int)GetVersion()) > 0) { /* NT */
+	if (info.dwMajorVersion > 5) { /* NT */
 		HKEY nt_key = 0, interfaces_key = 0;
 
-		if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, WIN_NS_NT_KEY, 0,
+		if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, WIN_NS_NT_KEY, 0,
 				 KEY_READ, &nt_key) != ERROR_SUCCESS) {
 			log(EVDNS_LOG_DEBUG,"Couldn't open nt key, %d",(int)GetLastError());
 			return -1;
 		}
-		r = RegOpenKeyEx(nt_key, TEXT("Interfaces"), 0,
+		r = RegOpenKeyExW(nt_key, L"Interfaces", 0,
 			     KEY_QUERY_VALUE|KEY_ENUMERATE_SUB_KEYS,
 			     &interfaces_key);
 		if (r != ERROR_SUCCESS) {
@@ -3799,7 +3807,7 @@ load_nameservers_from_registry(struct evdns_base *base)
 		RegCloseKey(nt_key);
 	} else {
 		HKEY win_key = 0;
-		if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, WIN_NS_9X_KEY, 0,
+		if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, WIN_NS_9X_KEY, 0,
 				 KEY_READ, &win_key) != ERROR_SUCCESS) {
 			log(EVDNS_LOG_DEBUG, "Couldn't open registry key, %d", (int)GetLastError());
 			return -1;

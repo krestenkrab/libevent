@@ -26,7 +26,7 @@
 #include "event2/event-config.h"
 #include "evconfig-private.h"
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(WINCE)
 #include <winsock2.h>
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -39,7 +39,7 @@
 #include <sys/queue.h>
 #include <stdio.h>
 #include <stdlib.h>
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(WINCE)
 #include <unistd.h>
 #endif
 #include <errno.h>

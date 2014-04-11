@@ -679,7 +679,7 @@ event_base_new_with_config(const struct event_config *cfg)
 int
 event_base_start_iocp_(struct event_base *base, int n_cpus)
 {
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(WINCE)
 	if (base->iocp)
 		return 0;
 	base->iocp = event_iocp_port_launch_(n_cpus);

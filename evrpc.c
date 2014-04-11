@@ -27,7 +27,7 @@
 #include "event2/event-config.h"
 #include "evconfig-private.h"
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(WINCE)
 #define WIN32_LEAN_AND_MEAN
 #include <winsock2.h>
 #include <windows.h>
@@ -35,7 +35,7 @@
 #endif
 
 #include <sys/types.h>
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(WINCE)
 #include <sys/socket.h>
 #endif
 #ifdef EVENT__HAVE_SYS_TIME_H
@@ -44,7 +44,7 @@
 #include <sys/queue.h>
 #include <stdio.h>
 #include <stdlib.h>
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(WINCE)
 #include <unistd.h>
 #endif
 #include <errno.h>

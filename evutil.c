@@ -27,11 +27,13 @@
 #include "event2/event-config.h"
 #include "evconfig-private.h"
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(WINCE)
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #define WIN32_LEAN_AND_MEAN
+#ifndef WINCE
 #include <windows.h>
+#endif
 #undef WIN32_LEAN_AND_MEAN
 #include <io.h>
 #include <tchar.h>
@@ -40,6 +42,10 @@
 /* For structs needed by GetAdaptersAddresses */
 #define _WIN32_WINNT 0x0501
 #include <iphlpapi.h>
+#endif
+
+#ifdef WINCE
+#define EVENT__HAVE_STRLCPY
 #endif
 
 #include <sys/types.h>
@@ -433,7 +439,7 @@ evutil_strtoll(const char *s, char **endptr, int base)
 	return (ev_int64_t)strtoll(s, endptr, base);
 #elif EVENT__SIZEOF_LONG == 8
 	return (ev_int64_t)strtol(s, endptr, base);
-#elif defined(_WIN32) && defined(_MSC_VER) && _MSC_VER < 1300
+#elif defined(_WIN32) && defined(_MSC_VER) && _MSC_VER < 1300 || defined(WINCE)
 	/* XXXX on old versions of MS APIs, we only support base
 	 * 10. */
 	ev_int64_t r;
@@ -1593,8 +1599,14 @@ evutil_gai_strerror(int err)
 	case EVUTIL_EAI_SYSTEM:
 		return "system error";
 	default:
-#if defined(USE_NATIVE_GETADDRINFO) && defined(_WIN32)
-		return gai_strerrorA(err);
+#if defined(USE_NATIVE_GETADDRINFO) && (defined(_WIN32) || defined(WINCE))
+      {
+        WCHAR* wbuff;
+        static char abuff [GAI_STRERROR_BUFFER_SIZE + 1];
+        wbuff = gai_strerrorW(err);
+        wcstombs(abuff,wbuff,GAI_STRERROR_BUFFER_SIZE);
+        return abuff;
+      }
 #elif defined(USE_NATIVE_GETADDRINFO)
 		return gai_strerror(err);
 #else

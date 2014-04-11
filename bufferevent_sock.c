@@ -30,6 +30,9 @@
 #include "evconfig-private.h"
 
 #include <sys/types.h>
+#if defined (WINCE)
+#include <winsock2.h>
+#endif
 
 #ifdef EVENT__HAVE_SYS_TIME_H
 #include <sys/time.h>

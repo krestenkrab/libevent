@@ -42,7 +42,7 @@
 #include <sys/ioccom.h>
 #endif
 
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(WINCE)
 #include <sys/resource.h>
 #include <sys/socket.h>
 #include <sys/stat.h>

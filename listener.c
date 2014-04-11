@@ -29,7 +29,7 @@
 
 #include <sys/types.h>
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(WINCE)
 #ifndef _WIN32_WINNT
 /* Minimum required for InitializeCriticalSectionAndSpinCount */
 #define _WIN32_WINNT 0x0403
@@ -505,8 +505,7 @@ new_accepting_socket(struct evconnlistener_iocp *lev, int family)
 	    event_base_get_npriorities(lev->event_base) / 2,
 	    accepted_socket_invoke_user_cb, res);
 
-	InitializeCriticalSectionAndSpinCount(&res->lock, 1000);
-
+    InitializeCriticalSectionAndSpinCount(&res->lock, 1000);
 	return res;
 }
 
