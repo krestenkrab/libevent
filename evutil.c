@@ -61,7 +61,9 @@
 #ifdef EVENT__HAVE_STDLIB_H
 #include <stdlib.h>
 #endif
+#ifdef EVENT__HAVE_ERRNO
 #include <errno.h>
+#endif
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
@@ -98,11 +100,15 @@
 #define open _open
 #define read _read
 #define close _close
+#ifdef WINCE
+#define stat _wstat
+#else
 #ifndef fstat
 #define fstat _fstati64
 #endif
 #ifndef stat
 #define stat _stati64
+#endif
 #endif
 #define mode_t int
 #endif
@@ -147,7 +153,11 @@ evutil_read_file_(const char *filename, char **content_out, size_t *len_out,
     int is_binary)
 {
 	int fd, r;
+#ifdef WINCE
+        size_t size;
+#else
 	struct stat st;
+#endif
 	char *mem;
 	size_t read_so_far=0;
 	int mode = O_RDONLY;
@@ -165,12 +175,21 @@ evutil_read_file_(const char *filename, char **content_out, size_t *len_out,
 	fd = evutil_open_closeonexec_(filename, mode, 0);
 	if (fd < 0)
 		return -1;
-	if (fstat(fd, &st) || st.st_size < 0 ||
-	    st.st_size > EV_SSIZE_MAX-1 ) {
+#ifdef WINCE
+        size = lseek(fd, 0, SEEK_END);
+        lseek(fd, 0, SEEK_CUR);
+#else
+        if (fstat(fd, &st) < 0) {
+          close(fd);
+          return -2;
+        }
+        size = st.st_size;
+#endif
+	if (size > EV_SSIZE_MAX-1 ) {
 		close(fd);
 		return -2;
 	}
-	mem = mm_malloc((size_t)st.st_size + 1);
+	mem = mm_malloc(size + 1);
 	if (!mem) {
 		close(fd);
 		return -2;
@@ -181,11 +200,11 @@ evutil_read_file_(const char *filename, char **content_out, size_t *len_out,
 #else
 #define N_TO_READ(x) (x)
 #endif
-	while ((r = read(fd, mem+read_so_far, N_TO_READ(st.st_size - read_so_far))) > 0) {
+	while ((r = read(fd, mem+read_so_far, N_TO_READ(size - read_so_far))) > 0) {
 		read_so_far += r;
-		if (read_so_far >= (size_t)st.st_size)
+		if (read_so_far >= size)
 			break;
-		EVUTIL_ASSERT(read_so_far < (size_t)st.st_size);
+		EVUTIL_ASSERT(read_so_far < size);
 	}
 	close(fd);
 	if (r < 0) {
@@ -671,7 +690,7 @@ evutil_check_ifaddrs(void)
 	if (!lib)
 		goto done;
 
-	if (!(fn = (GetAdaptersAddresses_fn_t) GetProcAddress(lib, "GetAdaptersAddresses")))
+	if (!(fn = (GetAdaptersAddresses_fn_t) GetProcAddress(lib, TEXT("GetAdaptersAddresses"))))
 		goto done;
 
 	/* Guess how much space we need. */
@@ -1808,8 +1827,10 @@ evutil_vsnprintf(char *buf, size_t buflen, const char *format, va_list ap)
 		return 0;
 #if defined(_MSC_VER) || defined(_WIN32)
 	r = _vsnprintf(buf, buflen, format, ap);
+#ifndef WINCE
 	if (r < 0)
 		r = _vscprintf(format, ap);
+#endif
 #elif defined(sgi)
 	/* Make sure we always use the correct vsnprintf on IRIX */
 	extern int      _xpg5_vsnprintf(char * __restrict,
@@ -1872,7 +1893,12 @@ evutil_inet_ntop(int af, const void *src, char *dst, size_t len)
 			}
 			if (strlen(buf) > len)
 				return NULL;
+#ifdef WINCE
+                        strncpy(dst, buf, len);
+                        dst[ max( len-1, strlen(buf) ) ] = 0;
+#else
 			strlcpy(dst, buf, len);
+#endif
 			return dst;
 		}
 		i = 0;
@@ -1914,7 +1940,12 @@ evutil_inet_ntop(int af, const void *src, char *dst, size_t len)
 		*cp = '\0';
 		if (strlen(buf) > len)
 			return NULL;
+#ifdef WINCE
+		strncpy(dst, buf, len);
+                dst[ max( len-1, strlen(buf) ) ] = 0;
+#else
 		strlcpy(dst, buf, len);
+#endif
 		return dst;
 #endif
 	} else {
@@ -2361,7 +2392,11 @@ evutil_getenv_(const char *varname)
 	if (evutil_issetugid())
 		return NULL;
 
+#ifdef EVENT__HAVE_GETENV
 	return getenv(varname);
+#else
+        return NULL;
+#endif
 }
 
 ev_uint32_t
@@ -2372,7 +2407,9 @@ evutil_weakrand_seed_(struct evutil_weakrand_state *state, ev_uint32_t seed)
 		evutil_gettimeofday(&tv, NULL);
 		seed = (ev_uint32_t)tv.tv_sec + (ev_uint32_t)tv.tv_usec;
 #ifdef _WIN32
+#ifndef WINCE
 		seed += (ev_uint32_t) _getpid();
+#endif
 #else
 		seed += (ev_uint32_t) getpid();
 #endif
@@ -2468,6 +2505,9 @@ evutil_hex_char_to_int_(char c)
 HANDLE
 evutil_load_windows_system_library_(const TCHAR *library_name)
 {
+#ifdef WINCE
+  return LoadLibrary(library_name);
+#else
   TCHAR path[MAX_PATH];
   unsigned n;
   n = GetSystemDirectory(path, MAX_PATH);
@@ -2476,6 +2516,7 @@ evutil_load_windows_system_library_(const TCHAR *library_name)
   _tcscat(path, TEXT("\\"));
   _tcscat(path, library_name);
   return LoadLibrary(path);
+#endif
 }
 #endif
 

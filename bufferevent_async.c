@@ -33,7 +33,9 @@
 #include <sys/time.h>
 #endif
 
+#ifdef EVENT__HAVE_ERRNO
 #include <errno.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

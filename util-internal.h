@@ -29,7 +29,13 @@
 #include "event2/event-config.h"
 #include "evconfig-private.h"
 
+#ifdef EVENT__HAVE_ERRNO
 #include <errno.h>
+#else
+#define EAGAIN 11
+#define ENOMEM 12
+#define EINVAL 22
+#endif
 
 /* For EVUTIL_ASSERT */
 #include "log-internal.h"
@@ -48,11 +54,7 @@
 
 #if defined (WINCE)
 #include <winsock2.h>
-__inline BOOL InitializeCriticalSectionAndSpinCount(LPCRITICAL_SECTION lpCriticalSection, DWORD dwSpinCount)
-{
-  InitializeCriticalSection(lpCriticalSection);
-  return TRUE;
-}
+#define InitializeCriticalSectionAndSpinCount(cs, _count) ({ InitializeCriticalSection(cs); TRUE; })
 #endif
 
 #ifdef __cplusplus
@@ -418,7 +420,7 @@ HANDLE evutil_load_windows_system_library_(const TCHAR *library_name);
 #endif
 #endif
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(WINCE)
 #define EV_SOCK_FMT EV_I64_FMT
 #define EV_SOCK_ARG(x) EV_I64_ARG((x))
 #else

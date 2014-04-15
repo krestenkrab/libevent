@@ -142,6 +142,14 @@ include include/include.am
 include sample/include.am
 include test/include.am
 
+if BUILD_CEGCC
+
+SYS_LIBS = -lws2
+SYS_SRC = win32select.c evthread_win32.c 
+SYS_INCLUDES = -IWIN32-Code -IWIN32-Code/nmake
+
+else
+
 if BUILD_WIN32
 
 SYS_LIBS = -lws2_32 -lshell32 -ladvapi32
@@ -155,6 +163,7 @@ SYS_LIBS =
 SYS_SRC =
 SYS_INCLUDES =
 
+endif
 endif
 
 if STRLCPY_IMPL

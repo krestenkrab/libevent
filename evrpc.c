@@ -47,8 +47,12 @@
 #if !defined(_WIN32) && !defined(WINCE)
 #include <unistd.h>
 #endif
+#ifdef EVENT__HAVE_ERRNO
 #include <errno.h>
+#endif
+#ifdef EVENT__HAVE_SIGNAL
 #include <signal.h>
+#endif
 #include <string.h>
 
 #include <sys/queue.h>

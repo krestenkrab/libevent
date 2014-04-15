@@ -414,7 +414,11 @@ arc4_stir(void)
 static void
 arc4_stir_if_needed(void)
 {
+#ifdef WINCE
+        pid_t pid = 1;
+#else
 	pid_t pid = getpid();
+#endif
 
 	if (arc4_count <= 0 || !rs_initialized || arc4_stir_pid != pid)
 	{

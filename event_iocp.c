@@ -102,11 +102,15 @@ int
 event_iocp_port_associate_(struct event_iocp_port *port, evutil_socket_t fd,
     ev_uintptr_t key)
 {
+#ifdef WINCE
+  return -1;
+#else
 	HANDLE h;
 	h = CreateIoCompletionPort((HANDLE)fd, port->port, key, port->n_threads);
 	if (!h)
 		return -1;
 	return 0;
+#endif
 }
 
 static void *
@@ -175,6 +179,9 @@ event_get_win32_extension_fns_(void)
 struct event_iocp_port *
 event_iocp_port_launch_(int n_cpus)
 {
+#ifdef WINCE
+  return NULL;
+#else
 	struct event_iocp_port *port;
 	int i;
 
@@ -221,6 +228,7 @@ err:
 		CloseHandle(port->shutdownSemaphore);
 	mm_free(port);
 	return NULL;
+#endif
 }
 
 static void

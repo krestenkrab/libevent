@@ -38,7 +38,9 @@
 #include <sys/time.h>
 #endif
 
+#ifdef EVENT__HAVE_ERRNO
 #include <errno.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -242,7 +244,7 @@ bufferevent_writecb(evutil_socket_t fd, short event, void *arg)
 			goto done;
 		} else {
 			connected = 1;
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(WINCE)
 			if (BEV_IS_ASYNC(bufev)) {
 				event_del(&bufev->ev_write);
 				bufferevent_async_set_connected_(bufev);
@@ -323,7 +325,7 @@ bufferevent_socket_new(struct event_base *base, evutil_socket_t fd,
 	struct bufferevent_private *bufev_p;
 	struct bufferevent *bufev;
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(WINCE)
 	if (base && event_base_get_iocp_(base))
 		return bufferevent_async_new_(base, fd, options);
 #endif
@@ -380,7 +382,7 @@ bufferevent_socket_connect(struct bufferevent *bev,
 		ownfd = 1;
 	}
 	if (sa) {
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(WINCE)
 		if (bufferevent_async_can_connect_(bev)) {
 			bufferevent_setfd(bev, fd);
 			r = bufferevent_async_connect_(bev, fd, sa, socklen);
@@ -395,7 +397,7 @@ bufferevent_socket_connect(struct bufferevent *bev,
 		if (r < 0)
 			goto freesock;
 	}
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(WINCE)
 	/* ConnectEx() isn't always around, even when IOCP is enabled.
 	 * Here, we borrow the socket object's write handler to fall back
 	 * on a non-blocking connect() when ConnectEx() is unavailable. */

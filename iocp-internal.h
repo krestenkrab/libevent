@@ -151,11 +151,13 @@ int evbuffer_launch_write_(struct evbuffer *buf, ev_ssize_t n, struct event_over
 void evbuffer_commit_read_(struct evbuffer *, ev_ssize_t);
 void evbuffer_commit_write_(struct evbuffer *, ev_ssize_t);
 
+#ifndef WINCE
 /** Create an IOCP, and launch its worker threads.  Internal use only.
 
     This interface is unstable, and will change.
  */
 struct event_iocp_port *event_iocp_port_launch_(int n_cpus);
+#endif
 
 /** Associate a file descriptor with an iocp, such that overlapped IO on the
     fd will happen on one of the iocp's worker threads.

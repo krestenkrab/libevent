@@ -47,8 +47,12 @@
 #include <unistd.h>
 #endif
 #include <ctype.h>
+#ifdef EVENT__HAVE_ERRNO
 #include <errno.h>
+#endif
+#ifdef EVENT__HAVE_SIGNAL
 #include <signal.h>
+#endif
 #include <string.h>
 #include <time.h>
 #include <limits.h>
@@ -668,7 +672,7 @@ event_base_new_with_config(const struct event_config *cfg)
 	}
 #endif
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(WINCE)
 	if (cfg && (cfg->flags & EVENT_BASE_FLAG_STARTUP_IOCP))
 		event_base_start_iocp_(base, cfg->n_cpus_hint);
 #endif
@@ -696,7 +700,7 @@ event_base_start_iocp_(struct event_base *base, int n_cpus)
 void
 event_base_stop_iocp_(struct event_base *base)
 {
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(WINCE)
 	int rv;
 
 	if (!base->iocp)
@@ -979,8 +983,10 @@ event_reinit(struct event_base *base)
 		if (evmap_reinit_(base) < 0)
 			res = -1;
 	} else {
+#ifdef EVENT__HAVE_SIGNAL
 		if (had_signal_added)
 			res = evsig_init_(base);
+#endif
 	}
 
 	/* If we were notifiable before, and nothing just exploded, become
@@ -1826,8 +1832,10 @@ event_base_loop(struct event_base *base, int flags)
 
 	clear_time_cache(base);
 
+#ifdef EVENT__HAVE_SIGNAL
 	if (base->sig.ev_signal_added && base->sig.ev_n_signals_added)
 		evsig_set_base_(base);
+#endif
 
 	done = 0;
 
@@ -2390,10 +2398,11 @@ evthread_notify_base_default(struct event_base *base)
 	buf[0] = (char) 0;
 #ifdef _WIN32
 	r = send(base->th_notify_fd[1], buf, 1, 0);
+	return (r < 0 && WSAGetLastError() != WSAEWOULDBLOCK) ? -1 : 0;
 #else
 	r = write(base->th_notify_fd[1], buf, 1);
-#endif
 	return (r < 0 && ! EVUTIL_ERR_IS_EAGAIN(errno)) ? -1 : 0;
+#endif
 }
 
 #ifdef EVENT__HAVE_EVENTFD
@@ -3392,7 +3401,9 @@ event_mm_calloc_(size_t count, size_t size)
 	}
 
 error:
+#ifdef EVENT__HAVE_ERRNO
 	errno = ENOMEM;
+#endif
 	return NULL;
 }
 
@@ -3400,7 +3411,9 @@ char *
 event_mm_strdup_(const char *str)
 {
 	if (!str) {
+#ifdef EVENT__HAVE_ERRNO
 		errno = EINVAL;
+#endif
 		return NULL;
 	}
 
@@ -3420,7 +3433,9 @@ event_mm_strdup_(const char *str)
 #endif
 
 error:
+#ifdef EVENT__HAVE_ERRNO
 	errno = ENOMEM;
+#endif
 	return NULL;
 }
 
@@ -3756,7 +3771,9 @@ event_free_debug_globals(void)
 static void
 event_free_evsig_globals(void)
 {
+#ifdef EVENT__HAVE_SIGNAL
 	evsig_free_globals_();
+#endif
 }
 
 static void
@@ -3786,8 +3803,10 @@ event_global_setup_locks_(const int enable_locks)
 #ifndef EVENT__DISABLE_DEBUG_MODE
 	EVTHREAD_SETUP_GLOBAL_LOCK(event_debug_map_lock_, 0);
 #endif
+#ifdef EVENT__HAVE_SIGNAL
 	if (evsig_global_setup_locks_(enable_locks) < 0)
 		return -1;
+#endif
 	if (evutil_global_setup_locks_(enable_locks) < 0)
 		return -1;
 	if (evutil_secure_rng_global_setup_locks_(enable_locks) < 0)

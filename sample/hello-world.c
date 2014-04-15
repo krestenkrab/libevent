@@ -8,9 +8,9 @@
 
 
 #include <string.h>
-#include <errno.h>
+// #include <errno.h>
 #include <stdio.h>
-#include <signal.h>
+//#include <signal.h>
 #ifndef _WIN32
 #include <netinet/in.h>
 # ifdef _XOPEN_SOURCE_EXTENDED
@@ -35,6 +35,54 @@ static void conn_writecb(struct bufferevent *, void *);
 static void conn_eventcb(struct bufferevent *, short, void *);
 static void signal_cb(evutil_socket_t, short, void *);
 
+#include <windows.h>
+
+HANDLE hPort = 0;
+
+static 
+void debug_init() {
+// Open the serial port.
+  hPort = CreateFile (TEXT("COM1:"), // Pointer to the name of the port
+                      GENERIC_READ | GENERIC_WRITE,
+                                    // Access (read-write) mode
+                      0,            // Share mode
+                      NULL,         // Pointer to the security attribute
+                      OPEN_EXISTING,// How to open the serial port
+                      0,            // Port attributes
+                      NULL);        // Handle to port with attribute
+                                    // to copy
+
+  
+}
+
+static void print_error(const char *string) {
+  DWORD dwError,
+    dwNumBytesWritten, 
+    nNumberOfBytesToWrite;
+
+  if (hPort == 0) debug_init();
+
+  nNumberOfBytesToWrite = strlen(string);
+
+  WriteFile (hPort,              // Port handle
+             (void*) string,              // Pointer to the data to write 
+             nNumberOfBytesToWrite, // Number of bytes to write
+             &dwNumBytesWritten, // Pointer to the number of bytes 
+             	                 // written
+             NULL                // Must be NULL for Windows Embedded CE
+             );
+
+}
+
+static void con_printf(const char *format, ...) {
+  char buffer[256];
+  va_list args;
+  va_start (args, format);
+  vsnprintf (buffer,256,format, args);
+  print_error (buffer);
+  va_end (args);
+}
+
 int
 main(int argc, char **argv)
 {
@@ -47,6 +95,8 @@ main(int argc, char **argv)
 	WSADATA wsa_data;
 	WSAStartup(0x0201, &wsa_data);
 #endif
+
+        fprintf(stderr, "hello launched\r\n");
 
 	base = event_base_new();
 	if (!base) {
@@ -68,12 +118,16 @@ main(int argc, char **argv)
 		return 1;
 	}
 
+#ifdef EVENT__HAVE_SIGNAL
 	signal_event = evsignal_new(base, SIGINT, signal_cb, (void *)base);
 
 	if (!signal_event || event_add(signal_event, NULL)<0) {
 		fprintf(stderr, "Could not create/add a signal event!\n");
 		return 1;
 	}
+#endif
+
+        MessageBoxW(0, L"Accepting on port 9995!", L"NOTICE!", 0);
 
 	event_base_dispatch(base);
 
@@ -81,7 +135,9 @@ main(int argc, char **argv)
 	event_free(signal_event);
 	event_base_free(base);
 
-	printf("done\n");
+        MessageBoxW(0, L"DONE!", L"DONE!", 0);
+
+        //	printf("done\n");
 	return 0;
 }
 
@@ -121,8 +177,8 @@ conn_eventcb(struct bufferevent *bev, short events, void *user_data)
 	if (events & BEV_EVENT_EOF) {
 		printf("Connection closed.\n");
 	} else if (events & BEV_EVENT_ERROR) {
-		printf("Got an error on the connection: %s\n",
-		    strerror(errno));/*XXX win32*/
+		printf("Got an error on the connection: %x\n",
+                       WSAGetLastError());/*XXX win32*/
 	}
 	/* None of the other events can happen here, since we haven't enabled
 	 * timeouts */

@@ -70,7 +70,9 @@
 #endif
 
 
+#ifdef EVENT__HAVE_ERRNO
 #include <errno.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -2999,6 +3001,9 @@ evbuffer_file_segment_materialize(struct evbuffer_file_segment *seg)
 #endif
 #ifdef _WIN32
 	if (!(flags & EVBUF_FS_DISABLE_MMAP)) {
+#ifdef WINCE
+          goto err;
+#else
 		intptr_t h = _get_osfhandle(fd);
 		HANDLE m;
 		ev_uint64_t total_size = length+offset;
@@ -3013,13 +3018,16 @@ evbuffer_file_segment_materialize(struct evbuffer_file_segment *seg)
 			seg->is_mapping = 1;
 			goto done;
 		}
+#endif
 	}
 #endif
 	{
 		ev_off_t start_pos = lseek(fd, 0, SEEK_CUR), pos;
 		ev_off_t read_so_far = 0;
 		char *mem;
+#ifdef EVENT__HAVE_ERRNO
 		int e;
+#endif
 		ev_ssize_t n = 0;
 		if (!(mem = mm_malloc(length)))
 			goto err;
@@ -3038,11 +3046,15 @@ evbuffer_file_segment_materialize(struct evbuffer_file_segment *seg)
 			read_so_far += n;
 		}
 
+#ifdef EVENT__HAVE_ERRNO
 		e = errno;
+#endif
 		pos = lseek(fd, start_pos, SEEK_SET);
 		if (n < 0 || (n == 0 && length > read_so_far)) {
 			mm_free(mem);
+#ifdef EVENT__HAVE_ERRNO
 			errno = e;
+#endif
 			goto err;
 		} else if (pos < 0) {
 			mm_free(mem);

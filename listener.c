@@ -38,7 +38,9 @@
 #include <ws2tcpip.h>
 #include <mswsock.h>
 #endif
+#ifdef EVENT__HAVE_ERRNO
 #include <errno.h>
+#endif
 #ifdef EVENT__HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
 #endif
@@ -159,7 +161,7 @@ evconnlistener_new(struct event_base *base,
 {
 	struct evconnlistener_event *lev;
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(WINCE)
 	if (base && event_base_get_iocp_(base)) {
 		const struct win32_extension_fns *ext =
 			event_get_win32_extension_fns_();
@@ -438,7 +440,7 @@ listener_read_cb(evutil_socket_t fd, short what, void *p)
 	}
 }
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(WINCE)
 struct accepting_socket {
 	CRITICAL_SECTION lock;
 	struct event_overlapped overlapped;
@@ -495,7 +497,9 @@ new_accepting_socket(struct evconnlistener_iocp *lev, int family)
 	if (!res)
 		return NULL;
 
+#ifndef WINCE
 	event_overlapped_init_(&res->overlapped, accepted_socket_cb);
+#endif
 	res->s = INVALID_SOCKET;
 	res->lev = lev;
 	res->buflen = buflen;

@@ -38,7 +38,9 @@
 #ifdef EVENT__HAVE_STDLIB_H
 #include <stdlib.h>
 #endif
+#ifdef EVENT__HAVE_ERRNO
 #include <errno.h>
+#endif
 #include <limits.h>
 #ifndef EVENT__HAVE_GETTIMEOFDAY
 #include <sys/timeb.h>
@@ -389,8 +391,8 @@ evutil_configure_monotonic_time_(struct evutil_monotonic_timer *base,
 
 	h = evutil_load_windows_system_library_(TEXT("kernel32.dll"));
 	if (h != NULL && !fallback) {
-		base->GetTickCount64_fn = (ev_GetTickCount_func)GetProcAddress(h, "GetTickCount64");
-		base->GetTickCount_fn = (ev_GetTickCount_func)GetProcAddress(h, "GetTickCount");
+                base->GetTickCount64_fn = (ev_GetTickCount_func)GetProcAddress(h, TEXT("GetTickCount64"));
+		base->GetTickCount_fn = (ev_GetTickCount_func)GetProcAddress(h, TEXT("GetTickCount"));
 	}
 
 	base->first_tick = base->last_tick_count = evutil_GetTickCount_(base);

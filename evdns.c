@@ -67,7 +67,9 @@
 #endif
 #include <stdlib.h>
 #include <string.h>
+#ifdef EVENT__HAVE_ERRNO
 #include <errno.h>
+#endif
 #ifdef EVENT__HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -3734,23 +3736,21 @@ load_nameservers_with_getnetworkparams(struct evdns_base *base)
 }
 
 static int
-config_nameserver_from_reg_key(struct evdns_base *base, HKEY key, const TCHAR *subkey)
+config_nameserver_from_reg_key(struct evdns_base *base, HKEY key, const wchar_t *subkey)
 {
 	char *buf;
 	DWORD bufsz = 0, type = 0;
 	int status = 0;
-        WCHAR wsubkey [MAX_PATH];
         char abuf [MAX_PATH];
 
-        mbstowcs(wsubkey,subkey,1024);
 	ASSERT_LOCKED(base);
-	if (RegQueryValueExW(key, wsubkey, 0, &type, NULL, &bufsz)
+	if (RegQueryValueExW(key, subkey, 0, &type, NULL, &bufsz)
 	    != ERROR_MORE_DATA)
 		return -1;
 	if (!(buf = mm_malloc(bufsz)))
 		return -1;
 
-	if (RegQueryValueExW(key, wsubkey, 0, &type, (LPBYTE)buf, &bufsz)
+	if (RegQueryValueExW(key, subkey, 0, &type, (LPBYTE)buf, &bufsz)
 	    == ERROR_SUCCESS && bufsz > 1) {
                 wcstombs(abuf,(PWCHAR)buf,MAX_PATH);
 		status = evdns_nameserver_ip_add_line(base,abuf);
@@ -3769,7 +3769,8 @@ load_nameservers_from_registry(struct evdns_base *base)
 {
 	int found = 0;
 	int r;
-        OSVERSIONINFO info = {0};
+        OSVERSIONINFO info;
+        memset(&info, 0, sizeof(OSVERSIONINFO));
         info.dwOSVersionInfoSize = sizeof (info);
         GetVersionExW((LPOSVERSIONINFO)&info);
 

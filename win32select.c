@@ -35,11 +35,15 @@
 #include <sys/types.h>
 #include <sys/queue.h>
 #include <limits.h>
+#ifdef EVENT__HAVE_SIGNAL
 #include <signal.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef EVENT__HAVE_ERRNO
 #include <errno.h>
+#endif
 
 #include "event2/util.h"
 #include "util-internal.h"
@@ -200,7 +204,9 @@ win32_init(struct event_base *base)
 	winop->readset_out->fd_count = winop->writeset_out->fd_count
 		= winop->exset_out->fd_count = 0;
 
+#ifdef EVENT__HAVE_SIGNAL
 	if (evsig_init_(base) < 0)
+#endif
 		winop->signals_are_broken = 1;
 
 	evutil_weakrand_seed_(&base->weakrand_seed, 0);
@@ -368,7 +374,9 @@ win32_dealloc(struct event_base *base)
 {
 	struct win32op *win32op = base->evbase;
 
+#ifdef EVENT__HAVE_SIGNAL
 	evsig_dealloc_(base);
+#endif
 	if (win32op->readset_in)
 		mm_free(win32op->readset_in);
 	if (win32op->writeset_in)

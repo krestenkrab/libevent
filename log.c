@@ -51,7 +51,9 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
+#ifdef EVENT__HAVE_ERRNO
 #include <errno.h>
+#endif
 #include "event2/event.h"
 #include "event2/util.h"
 
@@ -113,7 +115,11 @@ event_err(int eval, const char *fmt, ...)
 	va_list ap;
 
 	va_start(ap, fmt);
+#ifdef WINCE
+	event_logv_(EVENT_LOG_ERR, "?", fmt, ap);
+#else
 	event_logv_(EVENT_LOG_ERR, strerror(errno), fmt, ap);
+#endif
 	va_end(ap);
 	event_exit(eval);
 }
@@ -124,7 +130,11 @@ event_warn(const char *fmt, ...)
 	va_list ap;
 
 	va_start(ap, fmt);
+#ifdef WINCE
+	event_logv_(EVENT_LOG_WARN, "?", fmt, ap);
+#else
 	event_logv_(EVENT_LOG_WARN, strerror(errno), fmt, ap);
+#endif
 	va_end(ap);
 }
 

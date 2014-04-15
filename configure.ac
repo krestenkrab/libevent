@@ -149,6 +149,21 @@ die horribly
 	bwin32=false; AC_MSG_RESULT(no),
 )
 
+dnl - check if the macro _WIN32 is defined on this compiler.
+dnl - (this is how we check for a windows compiler)
+AC_MSG_CHECKING(for __CEGCC_VERSION__)
+AC_TRY_COMPILE(,
+	[
+#ifndef __CEGCC_VERSION__
+die horribly
+#endif
+	],
+	cegcc=true; AC_MSG_RESULT(yes),
+	cegcc=false; AC_MSG_RESULT(no),
+)
+
+
+
 dnl - check if the macro __CYGWIN__ is defined on this compiler.
 dnl - (this is how we check for a cygwin version of GCC)
 AC_MSG_CHECKING(for CYGWIN)
@@ -161,6 +176,22 @@ die horribly
 	cygwin=true; AC_MSG_RESULT(yes),
 	cygwin=false; AC_MSG_RESULT(no),
 )
+
+have_errno=no
+AC_MSG_CHECKING(for errno)
+AC_TRY_LINK([
+#if HAVE_ERRNO_H
+#include <errno.h>
+#endif], [static int x; x = errno;], 
+  [AC_MSG_RESULT(yes - in errno.h); AC_DEFINE(HAVE_ERRNO) have_errno=yes])
+if test $have_errno = no; then
+AC_TRY_LINK([
+#if HAVE_ERRNO_H
+#include <errno.h>
+#endif], [extern int errno; static int x; x = errno;], 
+  [AC_MSG_RESULT(yes - must define); AC_DEFINE(HAVE_ERRNO) AC_DEFINE(MUST_DEFINE_ERRNO)],
+  [AC_MSG_RESULT(no)])
+fi
 
 AC_CHECK_HEADERS([zlib.h])
 
@@ -313,6 +344,7 @@ if test "x$ac_cv_header_sys_sysctl_h" = "xyes"; then
 fi
 
 AM_CONDITIONAL(BUILD_WIN32, test x$bwin32 = xtrue)
+AM_CONDITIONAL(BUILD_CEGCC, test x$cegcc = xtrue)
 AM_CONDITIONAL(BUILD_CYGWIN, test x$cygwin = xtrue)
 AM_CONDITIONAL(BUILD_WITH_NO_UNDEFINED, test x$bwin32 = xtrue || test x$cygwin = xtrue)
 
@@ -365,6 +397,7 @@ AC_CHECK_FUNCS([ \
   unsetenv \
   usleep \
   vasprintf \
+  getenv \
 ])
 AM_CONDITIONAL(STRLCPY_IMPL, [test x"$ac_cv_func_strlcpy" = xno])
 
@@ -458,7 +491,7 @@ AC_EGREP_CPP(yes,
 yes
 #endif
 ],	[ AC_DEFINE(HAVE_SETFD, 1,
-	      [Define if F_SETFD is defined in <fcntl.h>])
+<	      [Define if F_SETFD is defined in <fcntl.h>])
 	  AC_MSG_RESULT(yes) ], AC_MSG_RESULT(no))
 
 needsignal=no
@@ -598,7 +631,11 @@ fi
 AM_CONDITIONAL(EVPORT_BACKEND, [test "x$haveeventports" = "xyes"])
 
 if test "x$bwin32" = "xtrue"; then
+  if test "x$cegcc" = "xtrue"; then
+        needsignal=no
+  else
 	needsignal=yes
+  fi
 fi
 
 AM_CONDITIONAL(SIGNAL_SUPPORT, [test "x$needsignal" = "xyes"])

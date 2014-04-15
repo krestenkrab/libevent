@@ -68,14 +68,18 @@
 #include <winsock2.h>
 #endif
 
+#ifdef EVENT__HAVE_ERRNO
 #include <errno.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #ifndef _WIN32
 #include <syslog.h>
 #endif
+#ifdef EVENT__HAVE_SIGNAL
 #include <signal.h>
+#endif
 #include <time.h>
 #ifdef EVENT__HAVE_UNISTD_H
 #include <unistd.h>
